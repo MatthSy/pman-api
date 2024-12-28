@@ -3,12 +3,24 @@ use ring::aead::{Aad, AES_256_GCM, BoundKey, Nonce, NONCE_LEN, NonceSequence, Op
 use ring::error::Unspecified;
 use serde::{Serialize, Deserialize};
 
+#[allow(unused)]
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct EncryptedData {
     pub(crate) password: [u8; 32],
     pub(crate) id: String,
     pub(crate) tag: [u8; 16],
 }
+
+#[allow(unused)]
+#[derive(Debug, Copy, Clone)]
+pub enum EncryptionError {
+    UnboundKeyErr,
+    SealingErr,
+    TagParsingErr,
+    IncorrectPassword,
+    ParsingErr,
+}
+
 
 #[allow(unused)]
 pub fn hash_password(str: String) -> [u8; 32]{
@@ -34,11 +46,13 @@ impl NonceSequence for CounterNonceSequence {
 }
 
 #[allow(unused)]
-// TODO : change return type to an Err enum
-pub fn encrypt_password(input: String, password_id: String, password_key: String) -> EncryptedData {
+pub fn encrypt_password(input: String, password_id: String, password_key: String) -> Result<EncryptedData, EncryptionError> {
     let hashed_key = hash_password(password_key);
 
-    let unbound_key = UnboundKey::new(&AES_256_GCM, &hashed_key).expect("Unbound key creation fail");
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &hashed_key);
+    if unbound_key.is_err() { return Err(EncryptionError::UnboundKeyErr) }
+    let unbound_key = unbound_key.unwrap();
+
     let nonce_sequence = CounterNonceSequence(0);
 
     let associated_data = Aad::from(&password_id);
@@ -48,22 +62,31 @@ pub fn encrypt_password(input: String, password_id: String, password_key: String
         in_out[i] = input_bytes[i];
     }
 
+    // Encryption
     let mut sealing_key = SealingKey::new(unbound_key, nonce_sequence);
-    let tag = sealing_key.seal_in_place_separate_tag(associated_data, &mut in_out).expect("Encrypting error");
+    let tag = sealing_key.seal_in_place_separate_tag(associated_data, &mut in_out);
+    if tag.is_err() { return Err(EncryptionError::SealingErr)}
 
-    EncryptedData {
+    // Parsing the tag as [u8; 16]
+    let tag: Result<[u8; 16], _> = tag.unwrap().as_ref().try_into();
+    if tag.is_err() { return Err(EncryptionError::TagParsingErr) }
+    let tag = tag.unwrap();
+
+    Ok(EncryptedData {
         password: <[u8; 32]>::try_from(in_out).unwrap(),
         id: password_id,
-        tag: tag.as_ref().try_into().expect("Error parsing the tag in encrypt_password function"),
-    }
+        tag,
+    })
 }
 
 #[allow(unused)]
-// TODO : change return type to an Err enum
-pub fn decrypt_password(encrypted_data: EncryptedData, password_key: String) -> String {
+pub fn decrypt_password(encrypted_data: EncryptedData, password_key: String) -> Result<String, EncryptionError> {
     let hashed_key = hash_password(password_key);
 
-    let unbound_key = UnboundKey::new(&AES_256_GCM, &hashed_key).expect("Unbound key creation fail");
+    let unbound_key = UnboundKey::new(&AES_256_GCM, &hashed_key);
+    if unbound_key.is_err() { return Err(EncryptionError::UnboundKeyErr) }
+    let unbound_key = unbound_key.unwrap();
+
     let nonce_sequence = CounterNonceSequence(0);
 
     let associated_data = Aad::from(&encrypted_data.id);
@@ -74,7 +97,19 @@ pub fn decrypt_password(encrypted_data: EncryptedData, password_key: String) -> 
     let mut cypher_text_with_tag = [&encrypted_data.password, encrypted_data.tag.as_ref()].concat();
     let associated_data = Aad::from(&encrypted_data.id);
 
-    let decrypted_data = opening_key.open_in_place(associated_data, &mut cypher_text_with_tag).expect("Error, incorrect password or unknown internal error");
+    let decrypted_data = opening_key.open_in_place(associated_data, &mut cypher_text_with_tag);
+    if decrypted_data.is_err() { return Err(EncryptionError::IncorrectPassword)}
+    let decrypted_data= decrypted_data.unwrap();
 
-    String::from_utf8(decrypted_data.to_vec()).unwrap()
+    Ok(String::from_utf8(decrypted_data.to_vec()).unwrap())
+}
+
+
+#[allow(unused)]
+pub fn decrypt_password_from_toml(serialized_data: String, password_key: String) -> Result<String, EncryptionError> {
+    let encrypted_data: Result<EncryptedData, _> = toml::from_str(&*serialized_data);
+    if encrypted_data.is_err() { return Err(EncryptionError::ParsingErr) }
+    let encrypted_data = encrypted_data.unwrap();
+
+    decrypt_password(encrypted_data, password_key)
 }
