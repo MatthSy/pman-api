@@ -1,3 +1,4 @@
+use std::fs;
 use serde::{Deserialize, Serialize};
 use crate::encryption::EncryptedData;
 use crate::response::ApiResponse;
@@ -5,19 +6,25 @@ use crate::response::ApiResponse;
 use toml;
 
 #[allow(unused)]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Client {
     url: String,
-    password_key: Option<String>
-    // TODO : add other options
+    password_key: Option<String>,
+    api_key: Option<String>,
 }
 
+#[allow(unused)]
 impl Client {
+
+    pub fn url(&self) -> String { self.url.clone() }
+    pub fn password_key(&self) -> Option<String> { self.password_key.clone() }
+    pub fn api_key(&self) -> Option<String> { self.api_key.clone() }
 
     pub fn new() -> Self {
         Client {
             url: "http://localhost:8000".to_string(),
             password_key: None,
+            api_key: None,
         }
     }
 
@@ -27,8 +34,10 @@ impl Client {
     }
 
     pub fn from_toml_file(file: String) -> Self {
-        // TODO
-        Client::new()
+        let client: Self = toml::from_str(
+            &fs::read_to_string(file).expect("Cannot load config file")
+        ).unwrap();
+        client
     }
 
     pub fn set_url(&mut self, url: String) -> &mut Self {
@@ -45,19 +54,19 @@ impl Client {
 
     #[allow(unused)]
     pub async fn get_password(&self, password_id: &str) -> ApiResponse {
-        let url = format!("{}/passwords/{}", self.url, password_id);
-        _get_passwords(url).await
+        let url = format!("{}/passwords/{}", self.url(), password_id);
+        _get_passwords(self, url).await
     }
 
     #[allow(unused)]
     pub async fn get_all_passwords(&self) -> ApiResponse {
-        let url =  format!("{}/passwords", self.url);
-        _get_passwords(url).await
+        let url =  format!("{}/passwords", self.url());
+        _get_passwords(self, url).await
     }
 
     #[allow(unused)]
-    pub async fn post_password(&self, encrypted_data: EncryptedData) -> ApiResponse {
-        let url = format!("{}/passwords/{}", self.url, encrypted_data.id);
+    pub async fn post_encrypted_password(&self, encrypted_data: EncryptedData) -> ApiResponse {
+        let url = format!("{}/passwords/{}", self.url(), encrypted_data.id);
 
         let mut serialized_data = toml::to_string(&encrypted_data);
         if serialized_data.is_err() {
@@ -68,6 +77,19 @@ impl Client {
         let client = reqwest::Client::new();
         let response = client.post(url)
             .body(serialized_data.unwrap())
+            .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
+            .send()
+            .await;
+
+        _treat_response(response).await
+    }
+
+    #[allow(unused)]
+    pub async fn post_reload_api_keys(&self) -> ApiResponse {
+        let url = format!("{}/api_keys/reload", self.url());
+        let client = reqwest::Client::new();
+        let response = client.post(url)
+            .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
             .send()
             .await;
 
@@ -99,7 +121,11 @@ async fn _treat_response(response: Result<reqwest::Response, reqwest::Error>) ->
 }
 
 #[allow(unused)]
-async fn _get_passwords(url: String) -> ApiResponse {
-    let response = reqwest::get(&url).await;
+async fn _get_passwords(client: &Client, url: String) -> ApiResponse {
+    let reqw_client = reqwest::Client::new();
+    let response = reqw_client.get(url)
+        .header("X-API-KEY", client.api_key().unwrap_or(String::new()))
+        .send()
+        .await;
     _treat_response(response).await
 }

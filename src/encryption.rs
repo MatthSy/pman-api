@@ -90,7 +90,6 @@ pub fn decrypt_password(encrypted_data: EncryptedData, password_key: String) -> 
     let nonce_sequence = CounterNonceSequence(0);
 
     let associated_data = Aad::from(&encrypted_data.id);
-    let mut in_out = [0; 32];
 
     let mut opening_key = OpeningKey::new(unbound_key, nonce_sequence);
 
@@ -99,7 +98,9 @@ pub fn decrypt_password(encrypted_data: EncryptedData, password_key: String) -> 
 
     let decrypted_data = opening_key.open_in_place(associated_data, &mut cypher_text_with_tag);
     if decrypted_data.is_err() { return Err(EncryptionError::IncorrectPassword)}
-    let decrypted_data= decrypted_data.unwrap();
+
+    // Remove the trailing 0s
+    let decrypted_data= decrypted_data.unwrap().split(|c| *c == 0).next().unwrap();
 
     Ok(String::from_utf8(decrypted_data.to_vec()).unwrap())
 }
