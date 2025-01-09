@@ -13,6 +13,7 @@ pub struct Client {
     api_key: Option<String>,
 }
 
+
 #[allow(unused)]
 impl Client {
 
