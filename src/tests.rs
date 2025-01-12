@@ -1,3 +1,38 @@
+use crate::requests::Client;
+
+pub fn mini_stress_test() {
+    let client = Client::from_toml_file(String::from("config.toml"));
+    let mut rt = tokio::runtime::Runtime::new().unwrap();
+
+    for _ in 0..100 {
+        rt.block_on(async {
+            let res = client.get_all_passwords().await;
+            println!("{:?}", res);
+        });
+    }
+
+    for _ in 0..100 {
+        rt.block_on(async {
+            let res = client.get_index().await;
+            println!("{:?}", res);
+        });
+    }
+
+    for _ in 0..100 {
+        rt.block_on(async {
+            let res = client.get_password("Test").await;
+            println!("{:?}", res);
+        });
+    }
+
+    for _ in 0..100 {
+        rt.block_on(async {
+            let res = client.get_password("nop").await;
+            println!("{:?}", res);
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::encryption::{decrypt_password, decrypt_password_from_toml, encrypt_password};
