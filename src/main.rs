@@ -11,5 +11,5 @@ async fn main() {
     let client = Client::from_toml_file(String::from("config.toml"));
     dbg!(client.clone());
 
-    println!("{:?}", client.post_reload_api_keys().await);
+    println!("{:?}", client.get_index().await);
 }

@@ -52,6 +52,16 @@ impl Client {
     }
 
 
+    pub async fn get_index(&self) -> ApiResponse {
+        let url = format!("{}/", self.url());
+        let reqw_client = reqwest::Client::new();
+        let response = reqw_client.get(url)
+            .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
+            .send()
+            .await;
+
+        _treat_response(response).await
+    }
 
     #[allow(unused)]
     pub async fn get_password(&self, password_id: &str) -> ApiResponse {
