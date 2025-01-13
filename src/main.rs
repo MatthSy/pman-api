@@ -7,11 +7,11 @@ mod tests;
 mod api_keys;
 
 
+#[tokio::main]
+async fn main() {
+    let client = Client::from_toml_file(String::from("config.toml"));
+    dbg!(client.clone());
 
-fn main() {
-    // let client = Client::from_toml_file(String::from("config.toml"));
-    // dbg!(client.clone());
-    //
-    // println!("{:?}", client.get_all_passwords().await);
-    tests::mini_stress_test();
+    println!("{:?}", client.get_all_passwords().await);
+    // tests::mini_stress_test();
 }

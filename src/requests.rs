@@ -11,6 +11,7 @@ pub struct Client {
     url: String,
     password_key: Option<String>,
     api_key: Option<String>,
+    user_name: Option<String>,
 }
 
 
@@ -20,12 +21,14 @@ impl Client {
     pub fn url(&self) -> String { self.url.clone() }
     pub fn password_key(&self) -> Option<String> { self.password_key.clone() }
     pub fn api_key(&self) -> Option<String> { self.api_key.clone() }
+    pub fn user_name(&self) -> Option<String> { self.user_name.clone() }
 
     pub fn new() -> Self {
         Client {
             url: "http://localhost:8000".to_string(),
             password_key: None,
             api_key: None,
+            user_name: None,
         }
     }
 
@@ -57,6 +60,7 @@ impl Client {
         let reqw_client = reqwest::Client::new();
         let response = reqw_client.get(url)
             .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
+            .header("X-USER-NAME", self.user_name().unwrap_or(String::new()))
             .send()
             .await;
 
@@ -89,6 +93,7 @@ impl Client {
         let response = client.post(url)
             .body(serialized_data.unwrap())
             .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
+            .header("X-USER-NAME", self.user_name().unwrap_or(String::new()))
             .send()
             .await;
 
@@ -101,6 +106,7 @@ impl Client {
         let client = reqwest::Client::new();
         let response = client.post(url)
             .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
+            .header("X-USER-NAME", self.user_name().unwrap_or(String::new()))
             .send()
             .await;
 
@@ -136,6 +142,7 @@ async fn _get_passwords(client: &Client, url: String) -> ApiResponse {
     let reqw_client = reqwest::Client::new();
     let response = reqw_client.get(url)
         .header("X-API-KEY", client.api_key().unwrap_or(String::new()))
+        .header("X-USER-NAME", client.user_name().unwrap_or(String::new()))
         .send()
         .await;
     _treat_response(response).await
