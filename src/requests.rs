@@ -64,19 +64,19 @@ impl Client {
             .send()
             .await;
 
-        _treat_response(response).await
+        treat_response(response).await
     }
 
     #[allow(unused)]
     pub async fn get_password(&self, password_id: &str) -> ApiResponse {
         let url = format!("{}/passwords/{}", self.url(), password_id);
-        _get_passwords(self, url).await
+        get_passwords(self, url).await
     }
 
     #[allow(unused)]
     pub async fn get_all_passwords(&self) -> ApiResponse {
         let url =  format!("{}/passwords", self.url());
-        _get_passwords(self, url).await
+        get_passwords(self, url).await
     }
 
     #[allow(unused)]
@@ -97,7 +97,7 @@ impl Client {
             .send()
             .await;
 
-        _treat_response(response).await
+        treat_response(response).await
     }
 
     #[allow(unused)]
@@ -110,7 +110,21 @@ impl Client {
             .send()
             .await;
 
-        _treat_response(response).await
+        treat_response(response).await
+    }
+
+
+    #[allow(unused)]
+    pub async fn delete_password(&self, password_id: &str) -> ApiResponse {
+        let url = format!("{}/passwords/{}", self.url(), password_id);
+        let client = reqwest::Client::new();
+        let response = client.delete(url)
+            .header("X-API-KEY", self.api_key().unwrap_or(String::new()))
+            .header("X-USER-NAME", self.user_name().unwrap_or(String::new()))
+            .send()
+            .await;
+
+        treat_response(response).await
     }
 }
 
@@ -119,7 +133,7 @@ impl Client {
 
 // Private function for treating responses from the server
 #[allow(unused)]
-async fn _treat_response(response: Result<reqwest::Response, reqwest::Error>) -> ApiResponse {
+async fn treat_response(response: Result<reqwest::Response, reqwest::Error>) -> ApiResponse {
     if response.is_err() {
         return ApiResponse::from(400, Some(String::from("Unknown Reqwest/Api error")), response.err());
     }
@@ -138,12 +152,12 @@ async fn _treat_response(response: Result<reqwest::Response, reqwest::Error>) ->
 }
 
 #[allow(unused)]
-async fn _get_passwords(client: &Client, url: String) -> ApiResponse {
+async fn get_passwords(client: &Client, url: String) -> ApiResponse {
     let reqw_client = reqwest::Client::new();
     let response = reqw_client.get(url)
         .header("X-API-KEY", client.api_key().unwrap_or(String::new()))
         .header("X-USER-NAME", client.user_name().unwrap_or(String::new()))
         .send()
         .await;
-    _treat_response(response).await
+    treat_response(response).await
 }

@@ -1,31 +1,23 @@
 use crate::requests::Client;
 
+#[allow(unused)]
 pub fn mini_stress_test() {
     let client = Client::from_toml_file(String::from("config.toml"));
-    let mut rt = tokio::runtime::Runtime::new().unwrap();
+    let rt = tokio::runtime::Runtime::new().unwrap();
 
     for _ in 0..100 {
         rt.block_on(async {
             let res = client.get_all_passwords().await;
             println!("{:?}", res);
         });
-    }
-
-    for _ in 0..100 {
         rt.block_on(async {
             let res = client.get_index().await;
             println!("{:?}", res);
         });
-    }
-
-    for _ in 0..100 {
         rt.block_on(async {
             let res = client.get_password("Test").await;
             println!("{:?}", res);
         });
-    }
-
-    for _ in 0..100 {
         rt.block_on(async {
             let res = client.get_password("nop").await;
             println!("{:?}", res);
@@ -42,7 +34,7 @@ mod tests {
     async fn test_encrypt_decrypt() {
         let encrypted = encrypt_password(
             String::from("FooFightersFan"),
-            String::from("Test"),
+            String::from("Test1"),
             String::from("123456")
         ).expect("couldnt encrypt");
 
@@ -55,13 +47,13 @@ mod tests {
     async fn test_encrypt_decrypt_incorrect_password_key() {
         let encrypted = encrypt_password(
             String::from("CreedEnjoyer"),
-            String::from("Test"),
+            String::from("Test2"),
             String::from("HoldMeNowImSixFeetFromTheEdge")
         ).expect("couldnt encrypt");
 
         decrypt_password(
             encrypted,
-            String::from("I dont like creed (crime)")
+            String::from("I dont like creed (illegal)")
         ).expect_err("couldnt decrypt");
     }
 
@@ -73,14 +65,14 @@ mod tests {
 
         let encrypted = encrypt_password(
             String::from("VeryHardToRememberPassword"),
-            String::from("Test"),
+            String::from("Test3"),
             String::from("AZERTY")
         ).expect("couldnt encrypt");
 
         let post_response = client.post_encrypted_password(encrypted).await;
         if post_response.is_err() { panic!() }
 
-        let get_response = client.get_password("pass1").await;
+        let get_response = client.get_password("Test3").await;
         let decrypted =
             decrypt_password_from_toml(
                 get_response.msg().expect("No msg"),
@@ -96,14 +88,14 @@ mod tests {
 
         let encrypted = encrypt_password(
             String::from("VeryHardToRememberPassword"), // Password to save
-            String::from("Test"), // Password ID
+            String::from("Test4"), // Password ID
             String::from("AZERTY") // Password key, to encrypt and decrypt
         ).expect("couldnt encrypt");
 
         let post_response = client.post_encrypted_password(encrypted).await;
         if post_response.is_err() { panic!() }
 
-        let get_response = client.get_password("pass1").await;
+        let get_response = client.get_password("Test4").await;
         if get_response.is_err() { panic!() }
 
         decrypt_password_from_toml(

@@ -12,6 +12,9 @@ async fn main() {
     let client = Client::from_toml_file(String::from("config.toml"));
     dbg!(client.clone());
 
-    println!("{:?}", client.get_all_passwords().await);
-    // tests::mini_stress_test();
+    println!("{:?}", client.delete_password("Test4").await);
 }
+
+// fn main() {
+//     tests::mini_stress_test();
+// }
