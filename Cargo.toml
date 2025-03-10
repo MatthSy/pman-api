@@ -3,6 +3,10 @@ name = "api"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "pmanApiLib"
+path = "src/lib.rs"
+
 [dependencies]
 reqwest = "0.12.9"
 ring = "0.17.8"
