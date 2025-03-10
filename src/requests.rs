@@ -32,9 +32,8 @@ impl Client {
         }
     }
 
-    pub fn from_toml(toml: String) -> Self {
-        // TODO
-        Client::new()
+    pub fn from_toml(toml: String) -> Result<Self, toml::de::Error> {
+        toml::from_str(&toml)
     }
 
     pub fn from_toml_file(file: String) -> Self {
